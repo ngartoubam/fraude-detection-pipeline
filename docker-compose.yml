@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+
+  spark:
+    image: bitnami/spark:latest
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+
+  jupyter:
+    image: jupyter/pyspark-notebook
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: frauduser
+      POSTGRES_PASSWORD: fraudpass
+      POSTGRES_DB: frauddb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  superset:
+    image: apache/superset
+    ports:
+      - "8088:8088"
+    environment:
+      SUPERSET_DATABASE_URI: postgresql://frauduser:fraudpass@postgres:5432/frauddb
+    depends_on:
+      - postgres
+
+  producer:
+    build: ./producer
+    depends_on:
+      - kafka
+    volumes:
+      - ./data:/app/data
+    command: python producer.py
+
+  consumer:
+    build: ./consumer
+    depends_on:
+      - kafka
+      - spark
+      - postgres
+    volumes:
+      - ./consumer:/app
+    command: python consumer.py
+
+volumes:
+  pgdata:

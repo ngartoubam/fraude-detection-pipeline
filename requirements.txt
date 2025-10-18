@@ -1,0 +1,13 @@
+kafka-python
+pyspark
+scikit-learn
+xgboost
+pandas
+numpy
+matplotlib
+seaborn
+imbalanced-learn
+sqlalchemy
+psycopg2-binary
+apache-superset
+jupyter
